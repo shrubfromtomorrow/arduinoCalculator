@@ -4,6 +4,7 @@ MCUFRIEND_kbv tft;
 
 #include <Fonts/FreeSans12pt7b.h>
 #include <Fonts/FreeSerif12pt7b.h>
+#include <SoftwareSerial.h>
 
 #define BLACK   0x0000
 #define RED     0xF800
@@ -13,6 +14,10 @@ MCUFRIEND_kbv tft;
 
 #define WIDTH 480
 #define HEIGHT 320
+
+const byte rxPin = 10;
+const byte txPin = 11;
+SoftwareSerial mySerial (rxPin, txPin);
 
 char input;
 
@@ -24,7 +29,13 @@ void setup(void)
     tft.setRotation(3);
     tft.fillScreen(WHITE);
     Serial.begin(9600);
-    delay(100);  
+    // Define pin modes for TX and RX
+    pinMode(rxPin, INPUT);
+    pinMode(txPin, OUTPUT);
+    
+    // Set the baud rate for the SoftwareSerial object
+    mySerial.begin(9600);
+    delay(100);
 }
 
 void circle() {
@@ -46,13 +57,15 @@ void uncircle() {
   tft.drawCircle(x, y, rad, WHITE);
   for (int i = rad; i > 1; i-=4) {
     tft.drawCircle(x, y, i, WHITE);
-  }  
+  }
 }
 
-
+byte empty[4][6] = {{1, 1, 1, 1, 1, 1},{1, 1, 1, 1, 1, 1},{1, 1, 1, 1, 1, 1},{1, 1, 1, 1, 1, 0}};
 void loop(void)
 {
-  if(Serial.available()){
+  byte keys[4][6];
+  
+  if(Serial.available() > 0){
       input = Serial.read();
       if (input == 'o') {
         for (int i = 0; i < 10; i--) {
@@ -67,4 +80,20 @@ void loop(void)
         Serial.println("Bad input");
       }
   }
+  else if (mySerial.available() > 0) {
+    mySerial.readBytes((uint8_t*)keys, sizeof(keys));
+    if (0 == memcmp(keys, empty, sizeof(empty))) {
+      circle();
+    }
+    // Print the data to the Serial monitor
+    for (int i = 0; i < 6; i++) {
+      for (int j = 0; j < 4; j++) {
+        Serial.print(keys[j][i]);
+        Serial.print(" ");
+      }
+      Serial.println();
+    }
+    Serial.println();
+  }
+  
 }
