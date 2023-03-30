@@ -12,88 +12,90 @@ MCUFRIEND_kbv tft;
 #define WHITE   0xFFFF
 #define GREY    0x8410
 
+// Screen width and height
 #define WIDTH 480
 #define HEIGHT 320
 
+const int cursorTick = 750; // Tickrate for cursor flash, once every 750 milliseconds
+long previousCursorMillis = 0;        // will store last time keyboard was checked
+
+// Defining digital pins to use for a software serial connection to keyboard
 const byte rxPin = 10;
 const byte txPin = 11;
 SoftwareSerial mySerial (rxPin, txPin);
 
-char input;
+byte keys[4][6]; // Keymap array, conatins the digital voltage values of each key
+
+const byte empty[4][6] = {{1, 1, 1, 1, 1, 1},{1, 1, 1, 1, 1, 1},{1, 1, 1, 1, 1, 1},{1, 1, 1, 1, 1, 0}};
+
+// Draw the interface for the regular calculator
+void drawCalcInterface(void) {
+  tft.drawFastHLine(0, HEIGHT * (7.0 / 8.0), 480, BLACK);
+}
+
+int cursorReps = 0; // Keep track of how many times the cursor has flashed
+
+// If cursor reps is even, draw the cursor, if it is odd, draw over the cursor
+void drawCursor(void) {
+  if (cursorReps % 2 == 0) {
+    tft.drawFastVLine(20, HEIGHT * (7.0 / 8.0) + 8, HEIGHT * (1.0 / 8.0) - 16, BLACK);
+  }
+  else {
+    tft.drawFastVLine(20, HEIGHT * (7.0 / 8.0) + 8, HEIGHT * (1.0 / 8.0) - 16, WHITE);    
+  }
+  cursorReps++;
+}
+
+// Refresh the screen
+void refresh(void) {
+  tft.fillScreen(BLACK);
+  tft.fillScreen(WHITE);
+}
+
 
 void setup(void)
 {
-    uint16_t ID = tft.readID();
+    uint16_t ID = tft.readID(); // Get ID of the display for MCUfriend
     if (ID == 0xD3D3) ID = 0x9481; //force ID if write-only display
     tft.begin(ID);
-    tft.setRotation(3);
+    tft.setRotation(3); // Set rotation to some value, this is one of the two landscape modes
     tft.fillScreen(WHITE);
-    Serial.begin(9600);
-    // Define pin modes for TX and RX
+    Serial.begin(9600); // Begin regular serial connection to laptop with TX and RX, pins 0 and 1
+
+    // Define pin modes for TX and RX for software serial connections
     pinMode(rxPin, INPUT);
     pinMode(txPin, OUTPUT);
     
-    // Set the baud rate for the SoftwareSerial object
-    mySerial.begin(9600);
-    delay(100);
+    mySerial.begin(9600); // Set the baud rate for the SoftwareSerial object
+    drawCalcInterface(); // Draw the main calc interface
 }
 
-void circle() {
-  // tft.drawLine(random(0, 480), random(0, 320), random(0, 480), random(0, 320), BLACK);
-  // tft.drawTriangle(random(0, 480), random(0, 320), random(0, 480), random(0, 320), random(0, 480), random(0, 320), BLACK);
-  int rad = random(0, 200);
-  int x = random(0, 480);
-  int y = random(0, 320);
-  tft.drawCircle(x, y, rad, BLACK);
-  for (int i = rad; i > 1; i-=4) {
-    tft.drawCircle(x, y, i, BLACK);
+void loop(void){
+  unsigned long currentMillis = millis(); // How many milliseconds calc has been running
+
+  // Check if the number of milliseconds elapsed is more than a cursor tick, draw cursor if it is
+  if(currentMillis - previousCursorMillis >= cursorTick) {
+    drawCursor();
+    previousCursorMillis = currentMillis;
   }
-}
-
-void uncircle() {
-  int rad = random(0, 200);
-  int x = random(0, 480);
-  int y = random(0, 320);
-  tft.drawCircle(x, y, rad, WHITE);
-  for (int i = rad; i > 1; i-=4) {
-    tft.drawCircle(x, y, i, WHITE);
-  }
-}
-
-byte empty[4][6] = {{1, 1, 1, 1, 1, 1},{1, 1, 1, 1, 1, 1},{1, 1, 1, 1, 1, 1},{1, 1, 1, 1, 1, 0}};
-void loop(void)
-{
-  byte keys[4][6];
   
-  if(Serial.available() > 0){
-      input = Serial.read();
-      if (input == 'o') {
-        for (int i = 0; i < 10; i--) {
-          circle();
-          uncircle();
-        }
-      }
-      else if (input == 'c') {
-        tft.fillScreen(WHITE);
-      }
-      else {
-        Serial.println("Bad input");
-      }
-  }
-  else if (mySerial.available() > 0) {
-    mySerial.readBytes((uint8_t*)keys, sizeof(keys));
-    if (0 == memcmp(keys, empty, sizeof(empty))) {
-      circle();
+  // Check if there is any incoming serial data from software serial to keyboard
+  if (mySerial.available() > 0) {
+    mySerial.readBytes((uint8_t*)keys, sizeof(keys)); // Readbytes of serial into keys array
+    if (0 == memcmp(keys, empty, sizeof(empty))) { // Check if keys array matches some designated key array
+      refresh();
+      drawCalcInterface();
     }
-    // Print the data to the Serial monitor
-    for (int i = 0; i < 6; i++) {
-      for (int j = 0; j < 4; j++) {
-        Serial.print(keys[j][i]);
-        Serial.print(" ");
-      }
-      Serial.println();
-    }
-    Serial.println();
   }
   
 }
+
+// Print the data to the Serial monitor
+    // for (int i = 0; i < 6; i++) {
+    //   for (int j = 0; j < 4; j++) {
+    //     Serial.print(keys[j][i]);
+    //     Serial.print(" ");
+    //   }
+    //   Serial.println();
+    // }
+    // Serial.println();
