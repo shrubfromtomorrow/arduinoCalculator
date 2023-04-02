@@ -26,7 +26,15 @@ SoftwareSerial mySerial (rxPin, txPin);
 
 byte keys[4][6]; // Keymap array, conatins the digital voltage values of each key
 
-const byte empty[4][6] = {{1, 1, 1, 1, 1, 1},{1, 1, 1, 1, 1, 1},{1, 1, 1, 1, 1, 1},{1, 1, 1, 1, 1, 0}};
+const byte empty[4][6] = {{1, 1, 1, 1, 1, 1},{1, 1, 1, 1, 1, 1},{1, 1, 1, 1, 1, 1},{1, 1, 1, 1, 1, 1}};
+
+const byte equals[4][6] = {{1, 1, 1, 1, 1, 1},{1, 1, 1, 1, 1, 1},{1, 1, 1, 1, 1, 1},{1, 1, 1, 1, 1, 0}};
+
+const byte one[4][6] = {{1, 1, 1, 1, 0, 1},{1, 1, 1, 1, 1, 1},{1, 1, 1, 1, 1, 1},{1, 1, 1, 1, 1, 1}};
+
+const byte two[4][6] = {{1, 1, 1, 1, 1, 1},{1, 1, 1, 1, 0, 1},{1, 1, 1, 1, 1, 1},{1, 1, 1, 1, 1, 1}};
+
+const byte back[4][6] = {{1, 1, 1, 1, 1, 1},{1, 1, 1, 1, 1, 1},{1, 1, 1, 1, 1, 1},{0, 1, 1, 1, 1, 1}};
 
 // Draw the interface for the regular calculator
 void drawCalcInterface(void) {
@@ -34,24 +42,41 @@ void drawCalcInterface(void) {
 }
 
 int cursorReps = 0; // Keep track of how many times the cursor has flashed
+int cursorX = 20;
+int cursorY = HEIGHT * (7.0 / 8.0) + 8;
 
 // If cursor reps is even, draw the cursor, if it is odd, draw over the cursor
 void drawCursor(void) {
   if (cursorReps % 2 == 0) {
-    tft.drawFastVLine(20, HEIGHT * (7.0 / 8.0) + 8, HEIGHT * (1.0 / 8.0) - 16, BLACK);
+    tft.drawFastVLine(cursorX, cursorY, HEIGHT * (1.0 / 8.0) - 16, BLACK);
   }
   else {
-    tft.drawFastVLine(20, HEIGHT * (7.0 / 8.0) + 8, HEIGHT * (1.0 / 8.0) - 16, WHITE);    
+    hideCursor();
   }
   cursorReps++;
+}
+
+void hideCursor(void) {
+  tft.drawFastVLine(cursorX, cursorY, HEIGHT * (1.0 / 8.0) - 16, WHITE);
+}
+
+void drawText(char* message) {
+  hideCursor();
+  tft.setTextColor(BLACK);
+  tft.setFont(&FreeSans12pt7b);
+  tft.setCursor(cursorX - 2, cursorY + 19);
+  tft.print(message);
+  cursorX += 9;
+  drawCursor();
 }
 
 // Refresh the screen
 void refresh(void) {
   tft.fillScreen(BLACK);
   tft.fillScreen(WHITE);
+  cursorX = 20; 
+  cursorY = HEIGHT * (7.0 / 8.0) + 8;
 }
-
 
 void setup(void)
 {
@@ -82,20 +107,17 @@ void loop(void){
   // Check if there is any incoming serial data from software serial to keyboard
   if (mySerial.available() > 0) {
     mySerial.readBytes((uint8_t*)keys, sizeof(keys)); // Readbytes of serial into keys array
-    if (0 == memcmp(keys, empty, sizeof(empty))) { // Check if keys array matches some designated key array
+    if (0 == memcmp(keys, equals, sizeof(equals))) { // Check if keys array matches some designated key array
       refresh();
       drawCalcInterface();
     }
-  }
-  
+    else if (0 == memcmp(keys, one, sizeof(one))) {
+      Serial.println("1");
+      drawText("1");      
+    }
+    else if (0 == memcmp(keys, two, sizeof(two))) {
+      Serial.println("2");
+      drawText("2");      
+    }
+  } 
 }
-
-// Print the data to the Serial monitor
-    // for (int i = 0; i < 6; i++) {
-    //   for (int j = 0; j < 4; j++) {
-    //     Serial.print(keys[j][i]);
-    //     Serial.print(" ");
-    //   }
-    //   Serial.println();
-    // }
-    // Serial.println();

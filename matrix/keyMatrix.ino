@@ -63,9 +63,10 @@ void sendMatrix(unsigned long currentMillis) {
           // Send the bytes over 
           mySerial.write((uint8_t*)keys, totalBytes);
           memcpy(lastInput, keys, sizeof(keys));
+          latestMillis = currentMillis;
           break;
         }
-        else if (0 == memcmp(keys, lastInput, sizeof(lastInput)) && elapsedMillis >= 1000) {
+        else if (0 == memcmp(keys, lastInput, sizeof(lastInput)) && elapsedMillis >= 200) {
           Serial.println("Same");
           int totalBytes = sizeof(keys); // Total size of keys array
           // Send the bytes over 
